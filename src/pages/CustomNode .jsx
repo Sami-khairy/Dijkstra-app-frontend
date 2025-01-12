@@ -20,7 +20,7 @@ const CustomNode = ({ data }) => {
                 type="target" // Ce handle est une cible (entrée)
                 position="top" // Position en haut du nœud
                 id="target-top" // Identifiant unique pour ce handle
-                style={{ top: '-10px', left: '50%', transform: 'translateX(-50%)' }}
+                style={{ top: '-10px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'red' }}
             />
 
             {/* Handle pour la sortie 1 (en bas) */}
@@ -36,7 +36,7 @@ const CustomNode = ({ data }) => {
                 type="target" // Ce handle est une cible (entrée)
                 position="left" // Position à gauche du nœud
                 id="target-left" // Identifiant unique pour ce handle
-                style={{ left: '-10px', top: '50%', transform: 'translateY(-50%)' }}
+                style={{ left: '-10px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'red'  }}
             />
 
             {/* Handle pour la sortie 2 (à droite) */}

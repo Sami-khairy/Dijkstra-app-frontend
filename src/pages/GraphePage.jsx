@@ -6,14 +6,14 @@ import ReactFlow, {
     MiniMap,
     useEdgesState,
     useNodesState,
-    MarkerType
+    MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Button, Alert } from 'react-bootstrap';
 import CustomNode from "./CustomNode ";
 
 const nodeTypes = {
-    customNode: CustomNode, // Enregistrez le type de nœud personnalisé
+    customNode: CustomNode,
 };
 
 const initialNodes = [];
@@ -27,12 +27,18 @@ const GraphePage = () => {
     const [result, setResult] = useState('');
 
     const onConnect = useCallback((params) => {
+        const edgeLabel = prompt('Enter value for the edge:', '1') || '1'; // Demander la valeur de l'arc
         params = {
             ...params,
             markerEnd: {
                 type: MarkerType.ArrowClosed,
+                color: '#FF0000',
             },
-            data: { label: prompt('Enter value for the edge:', '1') || '1' },
+            label: edgeLabel, // Ajouter le label à l'arc
+            labelStyle: { fill: '#000', fontSize: '12px' }, // Personnaliser le style du label
+            labelBgStyle: { fill: '#fff', opacity: 0.8 }, // Ajouter un fond au label
+            labelBgPadding: [4, 4], // Padding autour du label
+            labelBgBorderRadius: 2, // Bordure arrondie pour le fond du label
         };
         setEdges((eds) => {
             const newEdges = addEdge(params, eds);
@@ -56,7 +62,7 @@ const GraphePage = () => {
                 justifyContent: 'center',
                 border: '2px solid #007bff',
             },
-            type: 'customNode', // Utilisez le type de nœud personnalisé
+            type: 'customNode',
         };
         setNodes((nds) => {
             const newNodes = [...nds, newNode];
@@ -77,14 +83,13 @@ const GraphePage = () => {
 
     const displayGraph = () => {
         const graphRepresentation = edges.map(
-            (edge) => `${edge.source}-${edge.target}:${edge.data?.label || 'No Value'}`
+            (edge) => `${edge.source}-${edge.target}:${edge.label || 'No Value'}`
         );
         setResult(`Graph Representation:\n${graphRepresentation.join('\n')}`);
     };
 
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-
             <div style={{ padding: '20px', display: 'flex', gap: '10px', backgroundColor: '#f8f9fa' }}>
                 <Button variant="primary" onClick={addNode}>Add Node</Button>
                 <Button variant="secondary" onClick={displayGraph}>Display Graph</Button>
@@ -99,7 +104,7 @@ const GraphePage = () => {
                     onConnect={onConnect}
                     fitView
                     style={{ flex: 1 }}
-                    nodeTypes={nodeTypes} // Passez les types de nœuds personnalisés à ReactFlow
+                    nodeTypes={nodeTypes}
                 >
                     <MiniMap />
                     <Controls />
