@@ -88,11 +88,67 @@ const GraphePage = () => {
         setResult(`Graph Representation:\n${graphRepresentation.join('\n')}`);
     };
 
+    // Fonction pour convertir les nodes et edges en format Graphe
+    const convertToGraphe = (nodes, edges) => {
+        const sommets = nodes.map(node => ({
+            nom: node.id,
+            arretes: edges
+                .filter(edge => edge.source === node.id)
+                .map(edge => ({
+                    source: edge.source,
+                    destination: edge.target,
+                    poids: parseInt(edge.label) || 1, // Utiliser le label comme poids
+                })),
+        }));
+
+        return { sommets };
+    };
+
+    // Fonction pour calculer le chemin le plus court
+    const calculateShortestPath = async () => {
+        // Convertir les nodes et edges en format Graphe
+        const graphe = convertToGraphe(nodes, edges);
+
+        // Demander le sommet de départ
+        const startNode = prompt('Enter the start node:', nodes[0]?.id || '');
+
+        if (!startNode) {
+            alert('Start node is required.');
+            return;
+        }
+
+        try {
+            // Appeler l'API backend avec startNode comme paramètre de requête
+            const response = await fetch(`http://localhost:8080/api/dijkstra/calculate?startNode=${startNode}&details=true`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(graphe), // Envoyer uniquement le graphe dans le corps
+            });
+
+            console.log(JSON.stringify(graphe));
+
+
+            if (!response.ok) {
+                throw new Error('Failed to calculate shortest path.');
+            }
+
+            const result = await response.json();
+
+            // Afficher les résultats
+            setResult(`Shortest Paths:\n${JSON.stringify(result, null, 2)}`);
+        } catch (error) {
+            console.error('Error:', error);
+            setResult('An error occurred while calculating the shortest path.');
+        }
+    };
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px', display: 'flex', gap: '10px', backgroundColor: '#f8f9fa' }}>
                 <Button variant="primary" onClick={addNode}>Add Node</Button>
                 <Button variant="secondary" onClick={displayGraph}>Display Graph</Button>
+                <Button variant="success" onClick={calculateShortestPath}>Calculate Shortest Path</Button> {/* Nouveau bouton */}
                 <Button variant="warning" onClick={undo}>Undo (Ctrl+Z)</Button>
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
