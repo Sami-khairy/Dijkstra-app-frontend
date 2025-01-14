@@ -11,6 +11,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { Button, Alert, Dropdown } from 'react-bootstrap';
 import CustomNode from '../pages/CustomNode .jsx';
+import Sidebar from './Sidebar'; // Importer le composant Sidebar
 
 const nodeTypes = {
     customNode: CustomNode,
@@ -23,10 +24,10 @@ const GraphePage = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const [nodeId, setNodeId] = useState(1);
-    const [history, setHistory] = useState([]);
     const [result, setResult] = useState('');
-    const [selectedNode, setSelectedNode] = useState(null);  // Nœud sélectionné dans le dropdown
-    const [chemins, setChemins] = useState({});  // Stocker les chemins retournés par l'API
+    const [selectedNode, setSelectedNode] = useState(null); // Nœud sélectionné dans le dropdown
+    const [chemins, setChemins] = useState({}); // Stocker les chemins retournés par l'API
+    const [showSidebar, setShowSidebar] = useState(false); // État pour afficher/masquer la barre latérale
 
     const onConnect = useCallback((params) => {
         const edgeLabel = prompt('Enter value for the edge:', '1') || '1'; // Demander la valeur de l'arc
@@ -44,7 +45,6 @@ const GraphePage = () => {
         };
         setEdges((eds) => {
             const newEdges = addEdge(params, eds);
-            setHistory((hist) => [...hist, { nodes, edges: eds }]);
             return newEdges;
         });
     }, [setEdges, nodes]);
@@ -68,19 +68,9 @@ const GraphePage = () => {
         };
         setNodes((nds) => {
             const newNodes = [...nds, newNode];
-            setHistory((hist) => [...hist, { nodes: nds, edges }]);
             return newNodes;
         });
         setNodeId((id) => id + 1);
-    };
-
-    const undo = () => {
-        if (history.length > 0) {
-            const lastState = history[history.length - 1];
-            setNodes(lastState.nodes);
-            setEdges(lastState.edges);
-            setHistory((hist) => hist.slice(0, -1));
-        }
     };
 
     const displayGraph = () => {
@@ -105,12 +95,8 @@ const GraphePage = () => {
         return { sommets };
     };
 
-    // Fonction pour calculer le chemin le plus court
     const calculateShortestPath = async () => {
-        // Convertir les nodes et edges en format Graphe
         const graphe = convertToGraphe(nodes, edges);
-
-        // Demander le sommet de départ
         const startNode = prompt('Enter the start node:', nodes[0]?.id || '');
 
         if (!startNode) {
@@ -132,9 +118,8 @@ const GraphePage = () => {
             const result = await response.json();
             const chemins = result?.chemins || {};
 
-            console.log("Chemins from API:", chemins); // Debug
-            setChemins(chemins); // Mettre à jour les chemins dans l'état
-
+            console.log("Chemins from API:", chemins);
+            setChemins(chemins);
             setResult(`Shortest Paths:\n${JSON.stringify(result, null, 2)}`);
         } catch (error) {
             console.error('Error:', error);
@@ -142,52 +127,86 @@ const GraphePage = () => {
         }
     };
 
-    // Met à jour les couleurs des nœuds en fonction du chemin sélectionné
     const colorPathNodes = (nodeId) => {
-        console.log("Coloring path for node:", nodeId); // Debug
-        const chemin = chemins[nodeId] || []; // Récupérer le chemin pour le nœud sélectionné
-        console.log("Chemin:", chemin); // Debug
+        console.log("Coloring path for node:", nodeId);
+        const chemin = chemins[nodeId] || [];
 
-        // Met à jour les couleurs des nœuds
         setNodes((nds) =>
             nds.map((node) => {
-                const isInPath = chemin.includes(node.id);  // Vérifier si le nœud est dans le chemin
-                console.log(`Node ${node.id} is in path:`, isInPath); // Debug
+                const isInPath = chemin.includes(node.id);
                 return {
                     ...node,
                     style: {
                         ...node.style,
-                        color: isInPath ? 'green' : '', // Colorier le nœud
+                        color: isInPath ? 'green' : '',
                     },
                 };
             })
         );
 
-        // Met à jour les couleurs des arêtes
         setEdges((edges) =>
             edges.map((edge) => {
-                // Vérifier si l'arête est dans le chemin et si les nœuds source et cible sont consécutifs dans le chemin
                 const isInPath = chemin.indexOf(edge.source) >= 0 && chemin.indexOf(edge.target) === chemin.indexOf(edge.source) + 1;
-                console.log(`Edge ${edge.source}-${edge.target} is in path:`, isInPath); // Debug
                 return {
                     ...edge,
                     style: {
                         ...edge.style,
-                        stroke: isInPath ? 'green' : '', // Colorier l'arête
-                        strokeWidth: isInPath ? 2 : 1, // Ajuster l'épaisseur de l'arête
+                        stroke: isInPath ? 'green' : '',
+                        strokeWidth: isInPath ? 2 : 1,
                     },
                 };
             })
         );
     };
 
+    // Fonction pour gérer le clic sur un nœud
+    const onNodeClick = useCallback((event, node) => {
+        setSelectedNode(node); // Mettre à jour le nœud sélectionné
+        setShowSidebar(true); // Afficher la barre latérale
+    }, []);
+
+    // Fonction pour mettre à jour le nom d'un nœud
+    // Dans GraphePage
+    const updateNodeId = (oldId, newId) => {
+        // Vérifier si le nouvel id est unique
+        const isIdUnique = !nodes.some((node) => node.id === newId);
+        if (!isIdUnique) {
+            alert("L'ID doit être unique. Veuillez en choisir un autre.");
+            return;
+        }
+
+        // Mettre à jour l'id et le label du nœud
+        setNodes((nds) =>
+            nds.map((node) => {
+                if (node.id === oldId) {
+                    return {
+                        ...node,
+                        id: newId, // Mettre à jour l'id
+                        data: {
+                            ...node.data,
+                            label: `Node ${newId}`, // Mettre à jour le label
+                        },
+                    };
+                }
+                return node;
+            })
+        );
+
+        // Mettre à jour les arêtes connectées
+        setEdges((eds) =>
+            eds.map((edge) => {
+                if (edge.source === oldId) {
+                    return { ...edge, source: newId }; // Mettre à jour l'id source
+                }
+                if (edge.target === oldId) {
+                    return { ...edge, target: newId }; // Mettre à jour l'id target
+                }
+                return edge;
+            })
+        );
+    };
 
 
-
-    // Observer les changements dans les nœuds
-    useEffect(() => {
-        console.log("Nodes updated:", nodes); // Debug
-    }, [nodes]);
 
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -195,7 +214,6 @@ const GraphePage = () => {
                 <Button variant="primary" onClick={addNode}>Add Node</Button>
                 <Button variant="secondary" onClick={displayGraph}>Display Graph</Button>
                 <Button variant="success" onClick={calculateShortestPath}>Calculate Shortest Path</Button>
-                <Button variant="warning" onClick={undo}>Undo (Ctrl+Z)</Button>
                 {Object.keys(chemins).length > 0 && (
                     <Dropdown>
                         <Dropdown.Toggle variant="success" id="dropdown-basic">
@@ -206,9 +224,8 @@ const GraphePage = () => {
                                 <Dropdown.Item
                                     key={nodeId}
                                     onClick={() => {
-                                        setSelectedNode(nodeId); // Mettre à jour le nœud sélectionné
-                                        console.log("Selected Node:", nodeId); // Debug
-                                        colorPathNodes(nodeId); // Colorier le chemin à partir de ce nœud
+                                        setSelectedNode(nodeId);
+                                        colorPathNodes(nodeId);
                                     }}
                                 >
                                     {nodeId}
@@ -220,12 +237,14 @@ const GraphePage = () => {
             </div>
             <div style={{ flex: 1, position: 'relative' }}>
                 <ReactFlow
+                    key={nodes.length} // Forcer le re-rendering de ReactFlow
                     nodes={nodes}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
-                    fitView={true}  // S'assurer que l'affichage s'ajuste après la mise à jour des nœuds
+                    onNodeClick={onNodeClick} // Gérer le clic sur un nœud
+                    fitView={true}
                     style={{ flex: 1 }}
                     nodeTypes={nodeTypes}
                 >
@@ -234,6 +253,15 @@ const GraphePage = () => {
                     <Background variant="dots" gap={12} size={1} />
                 </ReactFlow>
             </div>
+
+            {showSidebar && (
+                <Sidebar
+                    selectedNode={selectedNode}
+                    onUpdateNodeId={updateNodeId} // Passer la fonction updateNodeId
+                    onClose={() => setShowSidebar(false)}
+                />
+            )}
+
             {result && (
                 <Alert variant="info" style={{ margin: '20px' }}>
                     <pre>{result}</pre>
