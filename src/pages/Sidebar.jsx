@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Form, Button } from 'react-bootstrap';
+import { Form, Button, ListGroup } from 'react-bootstrap';
 
-const Sidebar = ({ selectedNode, onUpdateNodeId, onClose }) => {
+const Sidebar = ({ selectedNode, onUpdateNodeId, onClose, edges, setEdges }) => {
     const [newNodeId, setNewNodeId] = useState(selectedNode?.id || '');
 
     const handleSave = () => {
@@ -9,6 +9,18 @@ const Sidebar = ({ selectedNode, onUpdateNodeId, onClose }) => {
             onUpdateNodeId(selectedNode.id, newNodeId);
             onClose();
         }
+    };
+
+    // Fonction pour mettre à jour le poids d'un arc
+    const handleEdgeLabelChange = (edgeId, newLabel) => {
+        setEdges((eds) =>
+            eds.map((edge) => {
+                if (edge.id === edgeId) {
+                    return { ...edge, label: newLabel };
+                }
+                return edge;
+            })
+        );
     };
 
     return (
@@ -39,6 +51,26 @@ const Sidebar = ({ selectedNode, onUpdateNodeId, onClose }) => {
                     <Button variant="secondary" onClick={onClose} style={{ marginTop: '10px', marginLeft: '10px' }}>
                         Fermer
                     </Button>
+
+                    {/* Afficher les arcs connectés */}
+                    <h4 style={{ marginTop: '20px' }}>Arcs connectés</h4>
+                    <ListGroup>
+                        {edges
+                            .filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
+                            .map((edge) => (
+                                <ListGroup.Item key={edge.id}>
+                                    <div>
+                                        {edge.source} → {edge.target}: {edge.label}
+                                    </div>
+                                    <Form.Control
+                                        type="text"
+                                        value={edge.label}
+                                        onChange={(e) => handleEdgeLabelChange(edge.id, e.target.value)}
+                                        style={{ marginTop: '5px' }}
+                                    />
+                                </ListGroup.Item>
+                            ))}
+                    </ListGroup>
                 </>
             ) : (
                 <p>Sélectionnez un nœud pour le modifier.</p>

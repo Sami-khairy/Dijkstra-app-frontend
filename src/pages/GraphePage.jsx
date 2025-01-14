@@ -131,6 +131,9 @@ const GraphePage = () => {
         console.log("Coloring path for node:", nodeId);
         const chemin = chemins[nodeId] || [];
 
+        console.log("Chemin:", chemin);
+
+        // Mettre à jour les couleurs des nœuds
         setNodes((nds) =>
             nds.map((node) => {
                 const isInPath = chemin.includes(node.id);
@@ -144,20 +147,50 @@ const GraphePage = () => {
             })
         );
 
-        setEdges((edges) =>
-            edges.map((edge) => {
+        // Mettre à jour les couleurs des arêtes
+        setEdges((eds) =>
+            eds.map((edge) => {
+                // Vérifier si l'arête est dans le chemin
                 const isInPath = chemin.indexOf(edge.source) >= 0 && chemin.indexOf(edge.target) === chemin.indexOf(edge.source) + 1;
+
+                if (isInPath) {
+                    // Trouver tous les arcs entre edge.source et edge.target
+                    const arcsBetweenNodes = edges.filter(
+                        (e) => e.source === edge.source && e.target === edge.target
+                    );
+
+                    // Trouver l'arc avec le poids minimum
+                    const minArc = arcsBetweenNodes.reduce((min, current) => {
+                        return parseInt(current.label) < parseInt(min.label) ? current : min;
+                    });
+
+                    // Colorer uniquement l'arc avec le poids minimum
+                    if (edge.id === minArc.id) {
+                        return {
+                            ...edge,
+                            style: {
+                                ...edge.style,
+                                stroke: 'green',
+                                strokeWidth: 2,
+                            },
+                        };
+                    }
+                }
+
+                // Ne pas colorer les autres arcs
                 return {
                     ...edge,
                     style: {
                         ...edge.style,
-                        stroke: isInPath ? 'green' : '',
-                        strokeWidth: isInPath ? 2 : 1,
+                        stroke: '',
+                        strokeWidth: 1,
                     },
                 };
             })
         );
     };
+
+
 
     // Fonction pour gérer le clic sur un nœud
     const onNodeClick = useCallback((event, node) => {
@@ -259,6 +292,8 @@ const GraphePage = () => {
                     selectedNode={selectedNode}
                     onUpdateNodeId={updateNodeId} // Passer la fonction updateNodeId
                     onClose={() => setShowSidebar(false)}
+                    edges={edges} // Passer les arcs
+                    setEdges={setEdges}
                 />
             )}
 
