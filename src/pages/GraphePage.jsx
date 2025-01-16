@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import ReactFlow, {
     addEdge,
     Background,
@@ -9,9 +9,9 @@ import ReactFlow, {
     MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Button, Alert, Dropdown } from 'react-bootstrap';
+import { Button, Alert, Dropdown, Form } from 'react-bootstrap'; // Ajouter Form
 import CustomNode from '../pages/CustomNode .jsx';
-import Sidebar from './Sidebar'; // Importer le composant Sidebar
+import Sidebar from './Sidebar';
 
 const nodeTypes = {
     customNode: CustomNode,
@@ -25,29 +25,32 @@ const GraphePage = () => {
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
     const [nodeId, setNodeId] = useState(1);
     const [result, setResult] = useState('');
-    const [selectedNode, setSelectedNode] = useState(null); // Nœud sélectionné dans le dropdown
-    const [chemins, setChemins] = useState({}); // Stocker les chemins retournés par l'API
-    const [showSidebar, setShowSidebar] = useState(false); // État pour afficher/masquer la barre latérale
+    const [selectedNode, setSelectedNode] = useState(null);
+    const [chemins, setChemins] = useState({});
+    const [showSidebar, setShowSidebar] = useState(false);
+    const [showStartNodeDropdown, setShowStartNodeDropdown] = useState(false);
+    const [includeDetails, setIncludeDetails] = useState(true); // État pour inclure ou non les détails
 
     const onConnect = useCallback((params) => {
-        const edgeLabel = prompt('Enter value for the edge:', '1') || '1'; // Demander la valeur de l'arc
+        const edgeLabel = prompt('Enter value for the edge:', '1') || '1';
         params = {
             ...params,
             markerEnd: {
                 type: MarkerType.ArrowClosed,
                 color: '#FF0000',
             },
-            label: edgeLabel, // Ajouter le label à l'arc
-            labelStyle: { fill: '#000', fontSize: '12px' }, // Personnaliser le style du label
-            labelBgStyle: { fill: '#fff', opacity: 0.8 }, // Ajouter un fond au label
-            labelBgPadding: [4, 4], // Padding autour du label
-            labelBgBorderRadius: 2, // Bordure arrondie pour le fond du label
+            label: edgeLabel,
+            labelStyle: { fill: '#000', fontSize: '12px' },
+            labelBgStyle: { fill: '#fff', opacity: 0.8 },
+            labelBgPadding: [4, 4],
+            labelBgBorderRadius: 2,
         };
         setEdges((eds) => {
             const newEdges = addEdge(params, eds);
             return newEdges;
         });
     }, [setEdges, nodes]);
+
     const addNode = () => {
         const newNode = {
             id: `${nodeId}`,
@@ -71,6 +74,7 @@ const GraphePage = () => {
         });
         setNodeId((id) => id + 1);
     };
+
     const displayGraph = () => {
         const graphRepresentation = edges.map((edge) => ({
             source: edge.source,
@@ -78,7 +82,6 @@ const GraphePage = () => {
             label: edge.label || 'No Value',
         }));
 
-        // Créer une représentation structurée du graphe
         const graphTable = (
             <table className="table table-bordered">
                 <thead>
@@ -100,7 +103,6 @@ const GraphePage = () => {
             </table>
         );
 
-        // Mettre à jour le résultat avec la table
         setResult(
             <div>
                 <h5>Graph Representation</h5>
@@ -108,6 +110,7 @@ const GraphePage = () => {
             </div>
         );
     };
+
     const convertToGraphe = (nodes, edges) => {
         const sommets = nodes.map(node => ({
             nom: node.id,
@@ -116,23 +119,23 @@ const GraphePage = () => {
                 .map(edge => ({
                     source: edge.source,
                     destination: edge.target,
-                    poids: parseInt(edge.label) || 1, // Utiliser le label comme poids
+                    poids: parseInt(edge.label) || 1,
                 })),
         }));
 
         return { sommets };
     };
-    const calculateShortestPath = async () => {
-        const graphe = convertToGraphe(nodes, edges);
-        const startNode = prompt('Enter the start node:', nodes[0]?.id || '');
 
+    const calculateShortestPath = async (startNode) => {
         if (!startNode) {
             alert('Start node is required.');
             return;
         }
 
+        const graphe = convertToGraphe(nodes, edges);
+
         try {
-            const response = await fetch(`http://localhost:8080/api/dijkstra/calculate?startNode=${startNode}&details=true`, {
+            const response = await fetch(`http://localhost:8080/api/dijkstra/calculate?startNode=${startNode}&details=${includeDetails}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(graphe),
@@ -153,13 +156,18 @@ const GraphePage = () => {
             setResult('An error occurred while calculating the shortest path.');
         }
     };
+
+    const handleStartNodeSelection = (nodeId) => {
+        setShowStartNodeDropdown(false);
+        calculateShortestPath(nodeId);
+    };
+
     const colorPathNodes = (nodeId) => {
         console.log("Coloring path for node:", nodeId);
         const chemin = chemins[nodeId] || [];
 
         console.log("Chemin:", chemin);
 
-        // Mettre à jour les couleurs des nœuds
         setNodes((nds) =>
             nds.map((node) => {
                 const isInPath = chemin.includes(node.id);
@@ -173,24 +181,19 @@ const GraphePage = () => {
             })
         );
 
-        // Mettre à jour les couleurs des arêtes
         setEdges((eds) =>
             eds.map((edge) => {
-                // Vérifier si l'arête est dans le chemin
                 const isInPath = chemin.indexOf(edge.source) >= 0 && chemin.indexOf(edge.target) === chemin.indexOf(edge.source) + 1;
 
                 if (isInPath) {
-                    // Trouver tous les arcs entre edge.source et edge.target
                     const arcsBetweenNodes = edges.filter(
                         (e) => e.source === edge.source && e.target === edge.target
                     );
 
-                    // Trouver l'arc avec le poids minimum
                     const minArc = arcsBetweenNodes.reduce((min, current) => {
                         return parseInt(current.label) < parseInt(min.label) ? current : min;
                     });
 
-                    // Colorer uniquement l'arc avec le poids minimum
                     if (edge.id === minArc.id) {
                         return {
                             ...edge,
@@ -203,7 +206,6 @@ const GraphePage = () => {
                     }
                 }
 
-                // Ne pas colorer les autres arcs
                 return {
                     ...edge,
                     style: {
@@ -215,31 +217,28 @@ const GraphePage = () => {
             })
         );
     };
-    // Fonction pour gérer le clic sur un nœud
+
     const onNodeClick = useCallback((event, node) => {
-        setSelectedNode(node); // Mettre à jour le nœud sélectionné
-        setShowSidebar(true); // Afficher la barre latérale
+        setSelectedNode(node);
+        setShowSidebar(true);
     }, []);
-    // Fonction pour mettre à jour le nom d'un nœud
-    // Dans GraphePage
+
     const updateNodeId = (oldId, newId) => {
-        // Vérifier si le nouvel id est unique
         const isIdUnique = !nodes.some((node) => node.id === newId);
         if (!isIdUnique) {
             alert("L'ID doit être unique. Veuillez en choisir un autre.");
             return;
         }
 
-        // Mettre à jour l'id et le label du nœud
         setNodes((nds) =>
             nds.map((node) => {
                 if (node.id === oldId) {
                     return {
                         ...node,
-                        id: newId, // Mettre à jour l'id
+                        id: newId,
                         data: {
                             ...node.data,
-                            label: `Node ${newId}`, // Mettre à jour le label
+                            label: `Node ${newId}`,
                         },
                     };
                 }
@@ -247,28 +246,50 @@ const GraphePage = () => {
             })
         );
 
-        // Mettre à jour les arêtes connectées
         setEdges((eds) =>
             eds.map((edge) => {
                 if (edge.source === oldId) {
-                    return { ...edge, source: newId }; // Mettre à jour l'id source
+                    return { ...edge, source: newId };
                 }
                 if (edge.target === oldId) {
-                    return { ...edge, target: newId }; // Mettre à jour l'id target
+                    return { ...edge, target: newId };
                 }
                 return edge;
             })
         );
     };
 
-
-
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px', display: 'flex', gap: '10px', backgroundColor: '#f8f9fa' }}>
                 <Button variant="primary" onClick={addNode}>Add Node</Button>
                 <Button variant="secondary" onClick={displayGraph}>Display Graph</Button>
-                <Button variant="success" onClick={calculateShortestPath}>Calculate Shortest Path</Button>
+
+                {/* Interrupteur pour inclure ou non les détails */}
+                <Form.Check
+                    type="switch"
+                    id="details-switch"
+                    label="Include Details"
+                    checked={includeDetails}
+                    onChange={(e) => setIncludeDetails(e.target.checked)}
+                />
+
+                <Dropdown show={showStartNodeDropdown} onToggle={(isOpen) => setShowStartNodeDropdown(isOpen)}>
+                    <Dropdown.Toggle variant="success" id="dropdown-start-node">
+                        Select Start Node
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu>
+                        {nodes.map((node) => (
+                            <Dropdown.Item
+                                key={node.id}
+                                onClick={() => handleStartNodeSelection(node.id)}
+                            >
+                                {node.id}
+                            </Dropdown.Item>
+                        ))}
+                    </Dropdown.Menu>
+                </Dropdown>
+
                 {Object.keys(chemins).length > 0 && (
                     <Dropdown>
                         <Dropdown.Toggle variant="success" id="dropdown-basic">
@@ -290,15 +311,16 @@ const GraphePage = () => {
                     </Dropdown>
                 )}
             </div>
+
             <div style={{ flex: 1, position: 'relative' }}>
                 <ReactFlow
-                    key={nodes.length} // Forcer le re-rendering de ReactFlow
+                    key={nodes.length}
                     nodes={nodes}
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
-                    onNodeClick={onNodeClick} // Gérer le clic sur un nœud
+                    onNodeClick={onNodeClick}
                     fitView={true}
                     style={{ flex: 1 }}
                     nodeTypes={nodeTypes}
@@ -312,9 +334,9 @@ const GraphePage = () => {
             {showSidebar && (
                 <Sidebar
                     selectedNode={selectedNode}
-                    onUpdateNodeId={updateNodeId} // Passer la fonction updateNodeId
+                    onUpdateNodeId={updateNodeId}
                     onClose={() => setShowSidebar(false)}
-                    edges={edges} // Passer les arcs
+                    edges={edges}
                     setEdges={setEdges}
                 />
             )}
