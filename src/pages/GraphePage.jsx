@@ -48,7 +48,6 @@ const GraphePage = () => {
             return newEdges;
         });
     }, [setEdges, nodes]);
-
     const addNode = () => {
         const newNode = {
             id: `${nodeId}`,
@@ -72,14 +71,43 @@ const GraphePage = () => {
         });
         setNodeId((id) => id + 1);
     };
-
     const displayGraph = () => {
-        const graphRepresentation = edges.map(
-            (edge) => `${edge.source}-${edge.target}:${edge.label || 'No Value'}`
-        );
-        setResult(`Graph Representation:\n${graphRepresentation.join('\n')}`);
-    };
+        const graphRepresentation = edges.map((edge) => ({
+            source: edge.source,
+            target: edge.target,
+            label: edge.label || 'No Value',
+        }));
 
+        // Créer une représentation structurée du graphe
+        const graphTable = (
+            <table className="table table-bordered">
+                <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Target</th>
+                    <th>Poids</th>
+                </tr>
+                </thead>
+                <tbody>
+                {graphRepresentation.map((edge, index) => (
+                    <tr key={index}>
+                        <td>{edge.source}</td>
+                        <td>{edge.target}</td>
+                        <td>{edge.label}</td>
+                    </tr>
+                ))}
+                </tbody>
+            </table>
+        );
+
+        // Mettre à jour le résultat avec la table
+        setResult(
+            <div>
+                <h5>Graph Representation</h5>
+                {graphTable}
+            </div>
+        );
+    };
     const convertToGraphe = (nodes, edges) => {
         const sommets = nodes.map(node => ({
             nom: node.id,
@@ -94,7 +122,6 @@ const GraphePage = () => {
 
         return { sommets };
     };
-
     const calculateShortestPath = async () => {
         const graphe = convertToGraphe(nodes, edges);
         const startNode = prompt('Enter the start node:', nodes[0]?.id || '');
@@ -126,7 +153,6 @@ const GraphePage = () => {
             setResult('An error occurred while calculating the shortest path.');
         }
     };
-
     const colorPathNodes = (nodeId) => {
         console.log("Coloring path for node:", nodeId);
         const chemin = chemins[nodeId] || [];
@@ -189,15 +215,11 @@ const GraphePage = () => {
             })
         );
     };
-
-
-
     // Fonction pour gérer le clic sur un nœud
     const onNodeClick = useCallback((event, node) => {
         setSelectedNode(node); // Mettre à jour le nœud sélectionné
         setShowSidebar(true); // Afficher la barre latérale
     }, []);
-
     // Fonction pour mettre à jour le nom d'un nœud
     // Dans GraphePage
     const updateNodeId = (oldId, newId) => {

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { Form, Button, ListGroup } from 'react-bootstrap';
+import { Form, Button, ListGroup, Card, Modal } from 'react-bootstrap';
+import { FaSave, FaTimes, FaEdit } from 'react-icons/fa';
 
 const Sidebar = ({ selectedNode, onUpdateNodeId, onClose, edges, setEdges }) => {
     const [newNodeId, setNewNodeId] = useState(selectedNode?.id || '');
+    const [showEdgeModal, setShowEdgeModal] = useState(false); // Pour afficher/masquer le modal
+    const [selectedEdge, setSelectedEdge] = useState(null); // Pour stocker l'arc sélectionné
+    const [newEdgeLabel, setNewEdgeLabel] = useState(''); // Pour stocker la nouvelle valeur de l'arc
 
     const handleSave = () => {
         if (newNodeId.trim()) {
@@ -11,71 +15,106 @@ const Sidebar = ({ selectedNode, onUpdateNodeId, onClose, edges, setEdges }) => 
         }
     };
 
-    // Fonction pour mettre à jour le poids d'un arc
-    const handleEdgeLabelChange = (edgeId, newLabel) => {
-        setEdges((eds) =>
-            eds.map((edge) => {
-                if (edge.id === edgeId) {
-                    return { ...edge, label: newLabel };
-                }
-                return edge;
-            })
-        );
+    // Ouvrir le modal pour modifier l'arc
+    const handleEditEdge = (edge) => {
+        setSelectedEdge(edge);
+        setNewEdgeLabel(edge.label);
+        setShowEdgeModal(true);
+    };
+
+    // Enregistrer la modification de l'arc
+    const handleSaveEdge = () => {
+        if (selectedEdge) {
+            setEdges((eds) =>
+                eds.map((edge) => {
+                    if (edge.id === selectedEdge.id) {
+                        return { ...edge, label: newEdgeLabel };
+                    }
+                    return edge;
+                })
+            );
+            setShowEdgeModal(false); // Fermer le modal
+        }
     };
 
     return (
-        <div style={{
+        <Card style={{
             width: '300px',
             height: '100vh',
-            backgroundColor: '#f8f9fa',
-            padding: '20px',
-            borderLeft: '1px solid #ddd',
             position: 'fixed',
             right: 0,
             top: 0,
         }}>
-            <h4>Modifier le nœud</h4>
-            {selectedNode ? (
-                <>
-                    <Form.Group>
-                        <Form.Label>ID du nœud</Form.Label>
-                        <Form.Control
-                            type="text"
-                            value={newNodeId}
-                            onChange={(e) => setNewNodeId(e.target.value)}
-                        />
-                    </Form.Group>
-                    <Button variant="primary" onClick={handleSave} style={{ marginTop: '10px' }}>
-                        Enregistrer
-                    </Button>
-                    <Button variant="secondary" onClick={onClose} style={{ marginTop: '10px', marginLeft: '10px' }}>
-                        Fermer
-                    </Button>
+            <Card.Body>
+                <Card.Title>Modifier le nœud</Card.Title>
+                {selectedNode ? (
+                    <>
+                        <Form.Group className="mb-3">
+                            <Form.Label>ID du nœud</Form.Label>
+                            <Form.Control
+                                type="text"
+                                value={newNodeId}
+                                onChange={(e) => setNewNodeId(e.target.value)}
+                            />
+                        </Form.Group>
+                        <Button variant="primary" onClick={handleSave} className="me-2">
+                            <FaSave className="me-2" /> Enregistrer
+                        </Button>
+                        <Button variant="secondary" onClick={onClose}>
+                            <FaTimes className="me-2" /> Fermer
+                        </Button>
 
-                    {/* Afficher les arcs connectés */}
-                    <h4 style={{ marginTop: '20px' }}>Arcs connectés</h4>
-                    <ListGroup>
-                        {edges
-                            .filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
-                            .map((edge) => (
-                                <ListGroup.Item key={edge.id}>
-                                    <div>
-                                        {edge.source} → {edge.target}: {edge.label}
-                                    </div>
+                        {/* Afficher les arcs connectés */}
+                        <Card.Title className="mt-4">Arcs connectés</Card.Title>
+                        <ListGroup>
+                            {edges
+                                .filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
+                                .map((edge) => (
+                                    <ListGroup.Item key={edge.id} className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            {edge.source} → {edge.target}: {edge.label}
+                                        </div>
+                                        <Button
+                                            variant="outline-primary"
+                                            size="sm"
+                                            onClick={() => handleEditEdge(edge)}
+                                        >
+                                            <FaEdit />
+                                        </Button>
+                                    </ListGroup.Item>
+                                ))}
+                        </ListGroup>
+
+                        {/* Modal pour modifier l'arc */}
+                        <Modal show={showEdgeModal} onHide={() => setShowEdgeModal(false)}>
+                            <Modal.Header closeButton>
+                                <Modal.Title>Modifier l'arc</Modal.Title>
+                            </Modal.Header>
+                            <Modal.Body>
+                                <Form.Group>
+                                    <Form.Label>Nouvelle valeur de l'arc</Form.Label>
                                     <Form.Control
                                         type="text"
-                                        value={edge.label}
-                                        onChange={(e) => handleEdgeLabelChange(edge.id, e.target.value)}
-                                        style={{ marginTop: '5px' }}
+                                        value={newEdgeLabel}
+                                        onChange={(e) => setNewEdgeLabel(e.target.value)}
                                     />
-                                </ListGroup.Item>
-                            ))}
-                    </ListGroup>
-                </>
-            ) : (
-                <p>Sélectionnez un nœud pour le modifier.</p>
-            )}
-        </div>
+                                </Form.Group>
+                            </Modal.Body>
+                            <Modal.Footer>
+                                <Button variant="secondary" onClick={() => setShowEdgeModal(false)}>
+                                    <FaTimes className="me-2" /> Annuler
+                                </Button>
+                                <Button variant="primary" onClick={handleSaveEdge}>
+                                    <FaSave className="me-2" /> Enregistrer
+                                </Button>
+                            </Modal.Footer>
+                        </Modal>
+                    </>
+                ) : (
+                    <Card.Text>Sélectionnez un nœud pour le modifier.</Card.Text>
+                )}
+            </Card.Body>
+        </Card>
     );
 };
 
