@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from "framer-motion";
 import ReactFlow, {
     addEdge,
     Background,
@@ -9,7 +10,7 @@ import ReactFlow, {
     MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Button, Alert, Dropdown, Form } from 'react-bootstrap'; // Ajouter Form
+import { Button, Alert, Dropdown, Form } from 'react-bootstrap';
 import CustomNode from '../pages/CustomNode .jsx';
 import Sidebar from './Sidebar';
 
@@ -29,7 +30,7 @@ const GraphePage = () => {
     const [chemins, setChemins] = useState({});
     const [showSidebar, setShowSidebar] = useState(false);
     const [showStartNodeDropdown, setShowStartNodeDropdown] = useState(false);
-    const [includeDetails, setIncludeDetails] = useState(true); // État pour inclure ou non les détails
+    const [includeDetails, setIncludeDetails] = useState(true);
 
     const onConnect = useCallback((params) => {
         const edgeLabel = prompt('Enter value for the edge:', '1') || '1';
@@ -47,7 +48,10 @@ const GraphePage = () => {
         };
         setEdges((eds) => {
             const newEdges = addEdge(params, eds);
-            return newEdges;
+            return newEdges.map((edge) => ({
+                ...edge,
+                animated: true, // Activer l'animation pour les arêtes
+            }));
         });
     }, [setEdges, nodes]);
 
@@ -262,10 +266,12 @@ const GraphePage = () => {
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px', display: 'flex', gap: '10px', backgroundColor: '#f8f9fa' }}>
-                <Button variant="primary" onClick={addNode}>Add Node</Button>
-                <Button variant="secondary" onClick={displayGraph}>Display Graph</Button>
-
-                {/* Interrupteur pour inclure ou non les détails */}
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="primary" onClick={addNode}>Add Node</Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="secondary" onClick={displayGraph}>Display Graph</Button>
+                </motion.div>
                 <Form.Check
                     type="switch"
                     id="details-switch"
@@ -273,7 +279,6 @@ const GraphePage = () => {
                     checked={includeDetails}
                     onChange={(e) => setIncludeDetails(e.target.checked)}
                 />
-
                 <Dropdown show={showStartNodeDropdown} onToggle={(isOpen) => setShowStartNodeDropdown(isOpen)}>
                     <Dropdown.Toggle variant="success" id="dropdown-start-node">
                         Select Start Node
@@ -289,7 +294,6 @@ const GraphePage = () => {
                         ))}
                     </Dropdown.Menu>
                 </Dropdown>
-
                 {Object.keys(chemins).length > 0 && (
                     <Dropdown>
                         <Dropdown.Toggle variant="success" id="dropdown-basic">
@@ -331,15 +335,34 @@ const GraphePage = () => {
                 </ReactFlow>
             </div>
 
-            {showSidebar && (
-                <Sidebar
-                    selectedNode={selectedNode}
-                    onUpdateNodeId={updateNodeId}
-                    onClose={() => setShowSidebar(false)}
-                    edges={edges}
-                    setEdges={setEdges}
-                />
-            )}
+            <AnimatePresence>
+                {showSidebar && (
+                    <motion.div
+                        style={{
+                            width: '300px',
+                            height: '100vh',
+                            backgroundColor: '#f8f9fa',
+                            padding: '20px',
+                            borderLeft: '1px solid #ddd',
+                            position: 'fixed',
+                            right: 0,
+                            top: 0,
+                        }}
+                        initial={{ x: 300, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: 300, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <Sidebar
+                            selectedNode={selectedNode}
+                            onUpdateNodeId={updateNodeId}
+                            onClose={() => setShowSidebar(false)}
+                            edges={edges}
+                            setEdges={setEdges}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {result && (
                 <Alert variant="info" style={{ margin: '20px' }}>
