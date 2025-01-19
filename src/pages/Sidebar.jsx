@@ -1,119 +1,148 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { Form, Button, ListGroup, Card, Modal } from 'react-bootstrap';
-import { FaSave, FaTimes, FaEdit } from 'react-icons/fa';
+import { FaSave, FaTimes, FaEdit, FaTrash } from 'react-icons/fa';
 
-const Sidebar = ({ selectedNode, onUpdateNodeId, onClose, edges, setEdges }) => {
+const Sidebar = ({ selectedNode, onUpdateNodeId, onClose, edges, setEdges, nodes, setNodes }) => {
     const [newNodeId, setNewNodeId] = useState(selectedNode?.id || '');
-    const [showEdgeModal, setShowEdgeModal] = useState(false); // Pour afficher/masquer le modal
-    const [selectedEdge, setSelectedEdge] = useState(null); // Pour stocker l'arc sélectionné
-    const [newEdgeLabel, setNewEdgeLabel] = useState(''); // Pour stocker la nouvelle valeur de l'arc
+    const [showEdgeModal, setShowEdgeModal] = useState(false);
+    const [selectedEdge, setSelectedEdge] = useState(null);
+    const [newEdgeLabel, setNewEdgeLabel] = useState('');
 
-    const handleSave = () => {
-        if (newNodeId.trim()) {
-            onUpdateNodeId(selectedNode.id, newNodeId);
+    // Synchroniser newNodeId avec selectedNode?.id
+    useEffect(() => {
+        setNewNodeId(selectedNode?.id || '');
+    }, [selectedNode]);
+
+    // Modifier un arc
+    const handleEditEdge = (edge) => {
+        setSelectedEdge(edge);
+        setNewEdgeLabel(edge.label || '');
+        setShowEdgeModal(true);
+    };
+
+    const saveEdge = () => {
+        setEdges((eds) =>
+            eds.map((edge) =>
+                edge.id === selectedEdge.id
+                    ? { ...edge, label: newEdgeLabel }
+                    : edge
+            )
+        );
+        setShowEdgeModal(false);
+        setSelectedEdge(null);
+        onClose();
+
+    };
+
+    // Supprimer un nœud et ses arêtes associées
+    const deleteNode = () => {
+        if (window.confirm(`Are you sure you want to delete node ${selectedNode.id}?`)) {
+            setNodes((nds) => nds.filter((node) => node.id !== selectedNode.id));
+            setEdges((eds) => eds.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id));
             onClose();
         }
     };
 
-    // Ouvrir le modal pour modifier l'arc
-    const handleEditEdge = (edge) => {
-        setSelectedEdge(edge);
-        setNewEdgeLabel(edge.label);
-        setShowEdgeModal(true);
+    // Supprimer une arête
+    const deleteEdge = (edgeId) => {
+        if (window.confirm('Are you sure you want to delete this edge?')) {
+            setEdges((eds) => eds.filter((edge) => edge.id !== edgeId));
+        }
+        onClose();
+
     };
 
-    // Enregistrer la modification de l'arc
-    const handleSaveEdge = () => {
-        if (selectedEdge) {
-            setEdges((eds) =>
-                eds.map((edge) => {
-                    if (edge.id === selectedEdge.id) {
-                        return { ...edge, label: newEdgeLabel };
-                    }
-                    return edge;
-                })
-            );
-            setShowEdgeModal(false); // Fermer le modal
-        }
-    };
+    // Visualiser les connexions d'un nœud
+    const nodeConnections = edges.filter(
+        (edge) => edge.source === selectedNode.id || edge.target === selectedNode.id
+    );
 
     return (
-        <Card style={{
-            width: '300px',
-            height: '100vh',
-            position: 'fixed',
-            right: 0,
-            top: 0,
-        }}>
+        <Card style={{ padding: '20px', backgroundColor: '#f8f9fa', height: '100%' }}>
+            <Card.Header className="d-flex justify-content-between align-items-center">
+                <h5>Node {selectedNode?.id}</h5>
+                <Button variant="outline-danger" size="sm" onClick={onClose}>
+                    <FaTimes />
+                </Button>
+            </Card.Header>
             <Card.Body>
-                <Card.Title>Modifier le nœud</Card.Title>
-                {selectedNode ? (
-                    <>
-                        <Form.Group className="mb-3">
-                            <Form.Label>ID du nœud</Form.Label>
+                <Form>
+                    <Form.Group className="mb-3">
+                        <Form.Label>Update Node ID</Form.Label>
+                        <Form.Control
+                            type="text"
+                            value={newNodeId}
+                            onChange={(e) => setNewNodeId(e.target.value)}
+                        />
+                    </Form.Group>
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            onUpdateNodeId(selectedNode.id, newNodeId); // Met à jour l'ID du nœud
+                            onClose(); // Ferme la sidebar
+                        }}
+                        className="mb-3"
+                    >
+                        <FaSave /> Save
+                    </Button>
+                </Form>
+                <Button variant="danger" onClick={deleteNode}>
+                    <FaTrash /> Delete Node
+                </Button>
+                <hr />
+                <h6>Node Connections:</h6>
+                <ListGroup>
+                    {nodeConnections.map((edge) => (
+                        <ListGroup.Item key={edge.id}>
+                            {edge.source} → {edge.target} (Weight: {edge.label || 'N/A'})
+                            <div className="d-flex justify-content-end">
+                                <Button
+                                    variant="outline-primary"
+                                    size="sm"
+                                    className="me-2"
+                                    onClick={() => handleEditEdge(edge)}
+                                >
+                                    <FaEdit />
+                                </Button>
+                                <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    onClick={() => deleteEdge(edge.id)}
+                                >
+                                    <FaTrash />
+                                </Button>
+                            </div>
+                        </ListGroup.Item>
+                    ))}
+                </ListGroup>
+            </Card.Body>
+
+            {/* Modal pour modifier le poids d'une arête */}
+            <Modal show={showEdgeModal} onHide={() => setShowEdgeModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Edit Edge</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group>
+                            <Form.Label>New Weight</Form.Label>
                             <Form.Control
                                 type="text"
-                                value={newNodeId}
-                                onChange={(e) => setNewNodeId(e.target.value)}
+                                value={newEdgeLabel}
+                                onChange={(e) => setNewEdgeLabel(e.target.value)}
                             />
                         </Form.Group>
-                        <Button variant="primary" onClick={handleSave} className="me-2">
-                            <FaSave className="me-2" /> Enregistrer
-                        </Button>
-                        <Button variant="secondary" onClick={onClose}>
-                            <FaTimes className="me-2" /> Fermer
-                        </Button>
-
-                        {/* Afficher les arcs connectés */}
-                        <Card.Title className="mt-4">Arcs connectés</Card.Title>
-                        <ListGroup>
-                            {edges
-                                .filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
-                                .map((edge) => (
-                                    <ListGroup.Item key={edge.id} className="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            {edge.source} → {edge.target}: {edge.label}
-                                        </div>
-                                        <Button
-                                            variant="outline-primary"
-                                            size="sm"
-                                            onClick={() => handleEditEdge(edge)}
-                                        >
-                                            <FaEdit />
-                                        </Button>
-                                    </ListGroup.Item>
-                                ))}
-                        </ListGroup>
-
-                        {/* Modal pour modifier l'arc */}
-                        <Modal show={showEdgeModal} onHide={() => setShowEdgeModal(false)}>
-                            <Modal.Header closeButton>
-                                <Modal.Title>Modifier l'arc</Modal.Title>
-                            </Modal.Header>
-                            <Modal.Body>
-                                <Form.Group>
-                                    <Form.Label>Nouvelle valeur de l'arc</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        value={newEdgeLabel}
-                                        onChange={(e) => setNewEdgeLabel(e.target.value)}
-                                    />
-                                </Form.Group>
-                            </Modal.Body>
-                            <Modal.Footer>
-                                <Button variant="secondary" onClick={() => setShowEdgeModal(false)}>
-                                    <FaTimes className="me-2" /> Annuler
-                                </Button>
-                                <Button variant="primary" onClick={handleSaveEdge}>
-                                    <FaSave className="me-2" /> Enregistrer
-                                </Button>
-                            </Modal.Footer>
-                        </Modal>
-                    </>
-                ) : (
-                    <Card.Text>Sélectionnez un nœud pour le modifier.</Card.Text>
-                )}
-            </Card.Body>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowEdgeModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button variant="primary" onClick={saveEdge}>
+                        Save Changes
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Card>
     );
 };

@@ -21,12 +21,10 @@ function App() {
             </Navbar.Collapse>
           </Container>
         </Navbar>
-        <Container className="mt-4">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/graphe" element={<GraphePage />} />
           </Routes>
-        </Container>
       </Router>
   );
 }

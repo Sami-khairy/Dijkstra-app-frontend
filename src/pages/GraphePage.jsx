@@ -10,9 +10,11 @@ import ReactFlow, {
     MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Button, Alert, Dropdown, Form } from 'react-bootstrap';
+import { Button, Alert, Dropdown, Form, Modal } from 'react-bootstrap';
 import CustomNode from '../pages/CustomNode .jsx';
 import Sidebar from './Sidebar';
+import { FaTable, FaPlus, FaPlay, FaTrash, FaInfoCircle, FaSave } from "react-icons/fa"; // Import des icônes
+import ResultModal from './ResultModal';
 
 const nodeTypes = {
     customNode: CustomNode,
@@ -31,6 +33,23 @@ const GraphePage = () => {
     const [showSidebar, setShowSidebar] = useState(false);
     const [showStartNodeDropdown, setShowStartNodeDropdown] = useState(false);
     const [includeDetails, setIncludeDetails] = useState(true);
+    const [showTable, setShowTable] = useState(false);
+    const [showResultModal, setShowResultModal] = useState(false);
+
+    // Réinitialiser tous les états
+    const resetAll = () => {
+        setNodes(initialNodes);
+        setEdges(initialEdges);
+        setNodeId(1);
+        setResult('');
+        setSelectedNode(null);
+        setChemins({});
+        setShowSidebar(false);
+        setShowStartNodeDropdown(false);
+        setIncludeDetails(true);
+        setShowTable(false);
+        setShowResultModal(false);
+    };
 
     const onConnect = useCallback((params) => {
         const edgeLabel = prompt('Enter value for the edge:', '1') || '1';
@@ -50,7 +69,7 @@ const GraphePage = () => {
             const newEdges = addEdge(params, eds);
             return newEdges.map((edge) => ({
                 ...edge,
-                animated: true, // Activer l'animation pour les arêtes
+                animated: true, // Animation uniquement pour les arêtes
             }));
         });
     }, [setEdges, nodes]);
@@ -72,10 +91,7 @@ const GraphePage = () => {
             },
             type: 'customNode',
         };
-        setNodes((nds) => {
-            const newNodes = [...nds, newNode];
-            return newNodes;
-        });
+        setNodes((nds) => [...nds, newNode]);
         setNodeId((id) => id + 1);
     };
 
@@ -113,6 +129,7 @@ const GraphePage = () => {
                 {graphTable}
             </div>
         );
+        setShowTable(!showTable);
     };
 
     const convertToGraphe = (nodes, edges) => {
@@ -126,7 +143,6 @@ const GraphePage = () => {
                     poids: parseInt(edge.label) || 1,
                 })),
         }));
-
         return { sommets };
     };
 
@@ -155,6 +171,7 @@ const GraphePage = () => {
             console.log("Chemins from API:", chemins);
             setChemins(chemins);
             setResult(`Shortest Paths:\n${JSON.stringify(result, null, 2)}`);
+            setShowResultModal(true);
         } catch (error) {
             console.error('Error:', error);
             setResult('An error occurred while calculating the shortest path.');
@@ -167,22 +184,16 @@ const GraphePage = () => {
     };
 
     const colorPathNodes = (nodeId) => {
-        console.log("Coloring path for node:", nodeId);
         const chemin = chemins[nodeId] || [];
 
-        console.log("Chemin:", chemin);
-
         setNodes((nds) =>
-            nds.map((node) => {
-                const isInPath = chemin.includes(node.id);
-                return {
-                    ...node,
-                    style: {
-                        ...node.style,
-                        color: isInPath ? 'green' : '',
-                    },
-                };
-            })
+            nds.map((node) => ({
+                ...node,
+                style: {
+                    ...node.style,
+                    color: chemin.includes(node.id) ? 'green' : '',
+                },
+            }))
         );
 
         setEdges((eds) =>
@@ -266,56 +277,99 @@ const GraphePage = () => {
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '20px', display: 'flex', gap: '10px', backgroundColor: '#f8f9fa' }}>
+                {/* Bouton Add Node */}
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button variant="primary" onClick={addNode}>Add Node</Button>
+                    <Button variant="primary" onClick={addNode}>
+                        <FaPlus /> Add Node
+                    </Button>
                 </motion.div>
+
+                {/* Bouton Display Graph */}
+                {edges.length > 0 && (
+
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button variant="secondary" onClick={displayGraph}>Display Graph</Button>
+                    <Button variant="secondary" onClick={displayGraph}>
+                        <FaTable /> {showTable ? 'Hide Table' : 'Show Table'}
+                    </Button>
                 </motion.div>
-                <Form.Check
-                    type="switch"
-                    id="details-switch"
-                    label="Include Details"
-                    checked={includeDetails}
-                    onChange={(e) => setIncludeDetails(e.target.checked)}
-                />
-                <Dropdown show={showStartNodeDropdown} onToggle={(isOpen) => setShowStartNodeDropdown(isOpen)}>
-                    <Dropdown.Toggle variant="success" id="dropdown-start-node">
-                        Select Start Node
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu>
-                        {nodes.map((node) => (
-                            <Dropdown.Item
-                                key={node.id}
-                                onClick={() => handleStartNodeSelection(node.id)}
-                            >
-                                {node.id}
-                            </Dropdown.Item>
-                        ))}
-                    </Dropdown.Menu>
-                </Dropdown>
+
+                )}
+
+                {/* Bouton Reset */}
+                {nodes.length > 0 && (
+
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button variant="danger" onClick={resetAll}>
+                        <FaTrash /> Reset
+                    </Button>
+                </motion.div>
+
+                )}
+
+                {/* Bouton View Detail */}
                 {Object.keys(chemins).length > 0 && (
-                    <Dropdown>
-                        <Dropdown.Toggle variant="success" id="dropdown-basic">
-                            Select Node
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                        <Button variant="info" onClick={() => setShowResultModal(true)}>
+                            <FaInfoCircle /> View Detail
+                        </Button>
+                    </motion.div>
+                )}
+
+                {/* Switch Include Details */}
+
+
+                {/* Dropdown Select Start Node */}
+                {nodes.length > 0 && (
+                    <Dropdown show={showStartNodeDropdown} onToggle={(isOpen) => setShowStartNodeDropdown(isOpen)}>
+                        <Dropdown.Toggle variant="success" id="dropdown-start-node">
+                            <FaPlay /> Select Start Node
                         </Dropdown.Toggle>
                         <Dropdown.Menu>
-                            {Object.keys(chemins).map((nodeId) => (
+                            {nodes.map((node) => (
                                 <Dropdown.Item
-                                    key={nodeId}
-                                    onClick={() => {
-                                        setSelectedNode(nodeId);
-                                        colorPathNodes(nodeId);
-                                    }}
+                                    key={node.id}
+                                    onClick={() => handleStartNodeSelection(node.id)}
                                 >
-                                    {nodeId}
+                                    {node.id}
                                 </Dropdown.Item>
                             ))}
                         </Dropdown.Menu>
                     </Dropdown>
+
+                )}
+                {nodes.length > 0 && (
+                    <Form.Check
+                        type="switch"
+                        id="details-switch"
+                        label="Include Details"
+                        checked={includeDetails}
+                        onChange={(e) => setIncludeDetails(e.target.checked)}
+                    />
+                )}
+
+                {Object.keys(chemins).length > 0 && (
+                        <Dropdown>
+                            <Dropdown.Toggle variant="warning" id="dropdown-basic">
+                                <FaPlay /> Select Node
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                                {Object.keys(chemins).map((nodeId) => (
+                                    <Dropdown.Item
+                                        key={nodeId}
+                                        onClick={() => {
+                                            setSelectedNode(nodeId);
+                                            colorPathNodes(nodeId);
+                                        }}
+                                    >
+                                        {nodeId}
+                                    </Dropdown.Item>
+                                ))}
+                            </Dropdown.Menu>
+                        </Dropdown>
                 )}
             </div>
 
+            {/* ReactFlow */}
             <div style={{ flex: 1, position: 'relative' }}>
                 <ReactFlow
                     key={nodes.length}
@@ -335,6 +389,7 @@ const GraphePage = () => {
                 </ReactFlow>
             </div>
 
+            {/* Sidebar */}
             <AnimatePresence>
                 {showSidebar && (
                     <motion.div
@@ -359,16 +414,25 @@ const GraphePage = () => {
                             onClose={() => setShowSidebar(false)}
                             edges={edges}
                             setEdges={setEdges}
+                            setNodes={setNodes}
                         />
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {result && (
+            {/* Tableau */}
+            {showTable && result && (
                 <Alert variant="info" style={{ margin: '20px' }}>
                     <pre>{result}</pre>
                 </Alert>
             )}
+
+            {/* Modal pour afficher le résultat */}
+            <ResultModal
+                show={showResultModal}
+                onHide={() => setShowResultModal(false)}
+                result={result}
+            />
         </div>
     );
 };
