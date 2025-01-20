@@ -35,6 +35,7 @@ const GraphePage = () => {
     const [includeDetails, setIncludeDetails] = useState(true);
     const [showTable, setShowTable] = useState(false);
     const [showResultModal, setShowResultModal] = useState(false);
+    const [isStaticDisplay, setIsStaticDisplay] = useState(false);
 
     // Réinitialiser tous les états
     const resetAll = () => {
@@ -180,6 +181,7 @@ const GraphePage = () => {
 
     const handleStartNodeSelection = (nodeId) => {
         setShowStartNodeDropdown(false);
+        setIsStaticDisplay(false); // Désactiver l'affichage statique
         calculateShortestPath(nodeId);
     };
 
@@ -309,7 +311,11 @@ const GraphePage = () => {
                 {/* Bouton View Detail */}
                 {Object.keys(chemins).length > 0 && (
                     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                        <Button variant="info" onClick={() => setShowResultModal(true)}>
+                        <Button variant="info" onClick={() => {
+                            setShowResultModal(true);
+                            setIsStaticDisplay(true);// Activer l'affichage statique
+                        }
+                        }>
                             <FaInfoCircle /> View Detail
                         </Button>
                     </motion.div>
@@ -432,6 +438,7 @@ const GraphePage = () => {
                 show={showResultModal}
                 onHide={() => setShowResultModal(false)}
                 result={result}
+                isStaticDisplay={isStaticDisplay}
             />
         </div>
     );

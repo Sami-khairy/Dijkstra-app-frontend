@@ -31,7 +31,7 @@ const scrollStyles = {
     },
 };
 
-const ResultModal = ({ show, onHide, result }) => {
+const ResultModal = ({ show, onHide, result, isStaticDisplay  }) => {
     const [streamedData, setStreamedData] = useState(''); // État pour simuler le flux de données
     const [isStreaming, setIsStreaming] = useState(false); // État pour contrôler le flux
     const contentRef = useRef(null); // Référence pour l'élément de contenu
@@ -39,24 +39,30 @@ const ResultModal = ({ show, onHide, result }) => {
     // Simuler un flux de données
     useEffect(() => {
         if (show && result) {
-            setIsStreaming(true);
-            let index = 0;
-            const interval = setInterval(() => {
-                if (index < result.length) {
-                    setStreamedData((prev) => prev + result[index]);
-                    index++;
-                } else {
-                    clearInterval(interval);
-                    setIsStreaming(false);
-                }
-            }, 10); // Vitesse du flux (50ms par caractère)
-            return () => clearInterval(interval);
+            if (isStaticDisplay) {
+                // Afficher le contenu statiquement
+                setStreamedData(result);
+                setIsStreaming(false);
+            } else {
+                // Afficher le contenu en streaming
+                setIsStreaming(true);
+                let index = 0;
+                const interval = setInterval(() => {
+                    if (index < result.length) {
+                        setStreamedData((prev) => prev + result[index]);
+                        index++;
+                    } else {
+                        clearInterval(interval);
+                        setIsStreaming(false);
+                    }
+                }, 10); // Vitesse du flux (50ms par caractère)
+                return () => clearInterval(interval);
+            }
         } else {
             setStreamedData(''); // Réinitialiser le flux lorsque le modal est fermé
         }
-    }, [show, result]);
+    }, [show, result, isStaticDisplay]);
 
-    // Faire défiler vers le bas à chaque mise à jour du texte
     useEffect(() => {
         if (contentRef.current) {
             contentRef.current.scrollTop = contentRef.current.scrollHeight;
@@ -74,7 +80,6 @@ const ResultModal = ({ show, onHide, result }) => {
                     backdrop="static"
                     keyboard={false}
                 >
-                    {/* Animation du modal */}
                     <motion.div
                         variants={modalVariants}
                         initial="hidden"
@@ -86,7 +91,7 @@ const ResultModal = ({ show, onHide, result }) => {
                         </Modal.Header>
                         <Modal.Body style={scrollStyles} ref={contentRef}>
                             <pre>{streamedData}</pre>
-                            {isStreaming && (
+                            {!isStaticDisplay && isStreaming && (
                                 <div className="text-center">
                                     <div className="spinner-border text-primary" role="status">
                                         <span className="visually-hidden">Loading...</span>
