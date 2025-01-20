@@ -1,0 +1,50 @@
+/* Styles pour l'animation du portail */
+.blur-out {
+    transition: all 1.5s ease-in-out;
+    filter: blur(10px) brightness(0.5);
+}
+
+/* Animation de pulsation pour le bouton */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.btn:not(:disabled) {
+    animation: pulse 2s infinite;
+}
+
+/* Style pour les cartes */
+.hover-card {
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.hover-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Optimisations pour les animations */
+* {
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Style pour le conteneur principal */
+.overflow-hidden {
+    overflow-x: hidden;
+}
+
+/* Styles pour les particules */
+@keyframes particleFade {
+    0% { opacity: 0; transform: scale(0); }
+    50% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0); }
+}
+
+/* Styles pour le portail */
+@keyframes portalRotate {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
